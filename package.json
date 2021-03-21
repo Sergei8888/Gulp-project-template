@@ -1,0 +1,29 @@
+{
+    "name": "winmine",
+    "version": "1.0.0",
+    "description": "Basic template for web project with gulp",
+    "main": "main.js",
+    "devDependencies": {
+        "@babel/core": "^7.13.10",
+        "@babel/preset-env": "^7.13.10",
+        "browser-sync": "^2.26.14",
+        "del": "^6.0.0",
+        "gulp": "^4.0.2",
+        "gulp-autoprefixer": "^7.0.1",
+        "gulp-babel": "^8.0.0",
+        "gulp-babel-minify": "^0.5.1",
+        "gulp-clean-css": "^4.3.0",
+        "gulp-concat": "^2.6.1",
+        "gulp-dart-sass": "^1.0.2",
+        "gulp-file-include": "^2.3.0",
+        "gulp-format": "^1.0.8",
+        "gulp-imagemin": "^7.1.0",
+        "gulp-webp": "^4.0.1",
+        "yargs": "^7.1.1"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Sergei Kuzmenkov / sergeiclashroale@gmail.com",
+    "license": "ISC"
+}

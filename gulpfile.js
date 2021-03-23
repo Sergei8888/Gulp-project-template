@@ -247,7 +247,7 @@ function browserSyncStart() {
   });
 
   //Слежка за изменением файлов
-  watch(path.app.html + "/*.html", htmlCompile).on(
+  watch(path.app.main + "/*.html", htmlCompile).on(
     "change",
     browserSync.reload
   );

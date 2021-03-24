@@ -213,6 +213,7 @@ let imageList = [
   path.app.img + "/*.svg",
   path.app.img + "/*.webp",
   path.app.img + "/*.gif",
+  path.app.img + "/*.ico",
 ];
 
 function imgCompile() {

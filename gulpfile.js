@@ -10,6 +10,8 @@ const autoprefixer = require("gulp-autoprefixer"); //Допавляет преф
 const babel = require("gulp-babel"); //Упрощает js код до более поддерживаемых стандартов
 const babelMinify = require("gulp-babel-minify"); //Сжимает js
 
+const obfuscate = require('gulp-javascript-obfuscator')
+
 const concat = require("gulp-concat"); //Склеивание 2 файлов
 const include = require("gulp-file-include"); //Включение одного файла в определенную часть другого
 
@@ -60,11 +62,8 @@ let path = {
         get img() {
             return this.main + "/img";
         },
-        get link_templates() {
-            return this.main + "./link_templates";
-        },
-        get components() {
-            return this.main + "/components";
+        get video() {
+            return this.main + "/video";
         },
     },
     dist: {
@@ -78,12 +77,12 @@ let path = {
         get img() {
             return this.main + "/img";
         },
-        get components() {
-            return this.main + "/components";
+        get video() {
+            return this.main + "/video";
         },
     },
     prod: {
-        main: "./ProdBuild",
+        main: "./prod",
         get css() {
             return this.main + "/css";
         },
@@ -93,8 +92,8 @@ let path = {
         get img() {
             return this.main + "/img";
         },
-        get components() {
-            return this.main + "/components";
+        get video() {
+            return this.main + "/video";
         },
     },
 };
@@ -103,28 +102,30 @@ function clear() {
     //Отчистка всех предыдущих файлов
     if (hard) {
         return (
-            del(path.prod.js + "/*.js"),
-            del(path.prod.img + "/*"),
-            del(path.prod.css + "/*.css"),
-            del(path.prod.main + "/*.html")
+            del(path.prod.js + "/*.js", { force: true }),
+            del(path.prod.img + "/*", { force: true }),
+            del(path.prod.css + "/*.css", { force: true }),
+            del(path.prod.main + "/*.html", { force: true }),
+            del(path.prod.video + "/*", { force: true })
         );
     }
     return (
-        del(path.dist.js + "/*.js"),
-        del(path.dist.img + "/*"),
-        del(path.dist.css + "/*.css"),
-        del(path.dist.main + "/*.html")
+        del(path.dist.js + "/*.js", { force: true }),
+        del(path.dist.img + "/*", { force: true }),
+        del(path.dist.css + "/*.css", { force: true }),
+        del(path.dist.main + "/*.html", { force: true }),
+        del(path.dist.video + "/*", { force: true })
     );
 }
 
-let teleportList = [path.app.components + '/*'];
+let teleportList = [path.app.video + '/*'];
 
 function teleport() {
     //Перенос файлов без обработки
     if (hard) {
-        return src(teleportList).pipe(dest(path.prod.components));
+        return src(teleportList).pipe(dest(path.prod.video));
     }
-    return src(teleportList).pipe(dest(path.dist.components));
+    return src(teleportList).pipe(dest(path.dist.video));
 }
 
 function htmlCompile() {
@@ -182,13 +183,14 @@ function jsCompile() {
             )
             .pipe(
                 babelMinify({
+                    builtIns: false,
                     mangle: {
                         keepClassName: true,
                     },
                 })
             )
-            .pipe(concat("bundle.js"))
-            .pipe(dest(path.prod.js));
+            .pipe(obfuscate())
+            .pipe(dest(path.prod.js))
     }
     return src(path.app.js + "/*.js").pipe(dest(path.dist.js));
 }
@@ -264,6 +266,18 @@ function browserSyncStart() {
     watch(path.app.css + "/*.css", cssCompile).on("change", browserSync.reload);
     watch(imageList, imgCompile).on("change", browserSync.reload);
     watch(path.app.js + "/*.js", jsCompile).on("change", browserSync.reload);
+    watch(path.app.video + "/*", compile)
+}
+
+function watchChanges() {
+    //Слежка за изменением файлов без перезагрузки сервера
+    watch(path.app.main + "/*.html", htmlCompile)
+    watch(path.app.link_templates + "/*.html", htmlCompile)
+    watch(path.app.scss + "/*.scss", sassCompile)
+    watch(path.app.css + "/*.css", cssCompile)
+    watch(imageList, imgCompile)
+    watch(path.app.js + "/*.js", jsCompile)
+    watch(path.app.video + "/*", compile)
 }
 
 compile = series(
@@ -280,8 +294,9 @@ exports.html = htmlCompile;
 exports.css = cssCompile;
 exports.sass = sassCompile;
 exports.js = jsCompile;
+exports.watch = watchChanges
 exports.teleport = teleport;
-exports.server = browserSyncStart;
 
+exports.serve = series(clear, compile, watchChanges);
 exports.dev = series(clear, compile, browserSyncStart);
 exports.build = series(clear, compile);

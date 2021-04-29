@@ -62,6 +62,9 @@ let path = {
         get img() {
             return this.main + "/img";
         },
+        get fonts() {
+            return this.main + "/fonts";
+        },
         get video() {
             return this.main + "/video";
         },
@@ -76,6 +79,9 @@ let path = {
         },
         get img() {
             return this.main + "/img";
+        },
+        get fonts() {
+            return this.main + "/fonts";
         },
         get video() {
             return this.main + "/video";
@@ -92,6 +98,9 @@ let path = {
         get img() {
             return this.main + "/img";
         },
+        get fonts() {
+            return this.main + "/fonts";
+        },
         get video() {
             return this.main + "/video";
         },
@@ -106,6 +115,7 @@ function clear() {
             del(path.prod.img + "/*", { force: true }),
             del(path.prod.css + "/*.css", { force: true }),
             del(path.prod.main + "/*.html", { force: true }),
+            del(path.prod.fonts + "/*", { force: true }),
             del(path.prod.video + "/*", { force: true })
         );
     }
@@ -114,18 +124,43 @@ function clear() {
         del(path.dist.img + "/*", { force: true }),
         del(path.dist.css + "/*.css", { force: true }),
         del(path.dist.main + "/*.html", { force: true }),
+        del(path.dist.fonts + "/*", { force: true }),
         del(path.dist.video + "/*", { force: true })
     );
 }
 
-let teleportList = [path.app.video + '/*'];
-
-function teleport() {
-    //Перенос файлов без обработки
-    if (hard) {
-        return src(teleportList).pipe(dest(path.prod.video));
+let teleportList = [{
+        inputDir: path.app.video,
+        outputDir: path.dist.video,
+        prodDir: path.prod.video,
+        get files() {
+            return this.inputDir + '/*'
+        }
+    },
+    {
+        inputDir: path.app.fonts,
+        outputDir: path.dist.fonts,
+        prodDir: path.prod.fonts,
+        get files() {
+            return this.inputDir + '/*'
+        }
     }
-    return src(teleportList).pipe(dest(path.dist.video));
+];
+
+async function teleport() {
+    //Перенос файлов без обработки
+    for (let teleportingItem of teleportList) {
+        teleportItem(teleportingItem)
+    }
+}
+
+function teleportItem(teleportingItem) {
+    if (hard) {
+        return src(teleportingItem.inputDir).pipe(dest(path.prod.main)), src(teleportingItem.files).pipe(dest(teleportingItem.prodDir))
+    } else {
+        return src(teleportingItem.inputDir).pipe(dest(path.dist.main)), src(teleportingItem.files).pipe(dest(teleportingItem.outputDir))
+    }
+
 }
 
 function htmlCompile() {

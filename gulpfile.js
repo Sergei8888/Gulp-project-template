@@ -129,10 +129,10 @@ function clear() {
     );
 }
 
-let teleportList = [{
-        inputDir: path.app.video,
-        outputDir: path.dist.video,
-        prodDir: path.prod.video,
+let teleportList = [{ //список файлов которые нужно только перенести
+        inputDir: path.app.video, //откуда взять файл 
+        outputDir: path.dist.video, //куда выкинуть
+        prodDir: path.prod.video, //куда выкинуть prod
         get files() {
             return this.inputDir + '/*'
         }

@@ -19,14 +19,12 @@
         "gulp-format": "^1.0.8",
         "gulp-imagemin": "^7.1.0",
         "gulp-webp": "^4.0.1",
-        "yargs": "^7.1.1"
+        "yargs": "^7.1.1",
+        "gulp-javascript-obfuscator": "^1.1.6"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "Sergei Kuzmenkov / sergeiclashroale@gmail.com",
-    "license": "ISC",
-    "dependencies": {
-        "gulp-javascript-obfuscator": "^1.1.6"
-    }
+    "license": "ISC"
 }

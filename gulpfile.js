@@ -50,9 +50,6 @@ let path = {
     //Путевая карта проекта
     app: {
         main: "./app",
-        get css() {
-            return this.main + "/css";
-        },
         get scss() {
             return this.main + "/scss";
         },
@@ -199,15 +196,6 @@ function sassCompile() {
         .pipe(dest(path.dist.css));
 }
 
-function cssCompile() {
-    if (hard) {
-        return src(path.app.css + "/*.css")
-            .pipe(minifyCss())
-            .pipe(dest(path.prod.css));
-    }
-    return src(path.app.css + "/*.css").pipe(dest(path.dist.css));
-}
-
 function jsCompile() {
     if (hard) {
         return src(path.app.js + "/*.js")
@@ -298,7 +286,7 @@ function browserSyncStart() {
         "change",
         browserSync.reload
     );
-    watch(path.app.css + "/*.css", cssCompile).on("change", browserSync.reload);
+
     watch(imageList, imgCompile).on("change", browserSync.reload);
     watch(path.app.js + "/*.js", jsCompile).on("change", browserSync.reload);
     watch(path.app.video + "/*", compile)
@@ -309,7 +297,7 @@ function watchChanges() {
     watch(path.app.main + "/*.html", htmlCompile)
     watch(path.app.link_templates + "/*.html", htmlCompile)
     watch(path.app.scss + "/*.scss", sassCompile)
-    watch(path.app.css + "/*.css", cssCompile)
+
     watch(imageList, imgCompile)
     watch(path.app.js + "/*.js", jsCompile)
     watch(path.app.video + "/*", compile)
@@ -318,7 +306,7 @@ function watchChanges() {
 compile = series(
     htmlCompile,
     sassCompile,
-    cssCompile,
+
     jsCompile,
     imgCompile,
     teleport
@@ -326,7 +314,7 @@ compile = series(
 
 exports.clear = clear;
 exports.html = htmlCompile;
-exports.css = cssCompile;
+
 exports.sass = sassCompile;
 exports.js = jsCompile;
 exports.watch = watchChanges

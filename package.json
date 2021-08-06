@@ -1,5 +1,5 @@
 {
-    "name": "winmine",
+    "name": "gulp_pj_build",
     "version": "1.0.0",
     "description": "Basic template for web project with gulp",
     "main": "main.js",
@@ -13,14 +13,13 @@
         "gulp-babel": "^8.0.0",
         "gulp-babel-minify": "^0.5.1",
         "gulp-clean-css": "^4.3.0",
-        "gulp-concat": "^2.6.1",
         "gulp-dart-sass": "^1.0.2",
         "gulp-file-include": "^2.3.0",
-        "gulp-format": "^1.0.8",
         "gulp-imagemin": "^7.1.0",
         "gulp-javascript-obfuscator": "^1.1.6",
+        "gulp-util": "^3.0.8",
         "gulp-webp": "^4.0.1",
-        "yargs": "^7.1.1"
+        "vinyl-ftp": "^0.6.1"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"

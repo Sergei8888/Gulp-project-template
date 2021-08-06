@@ -1,4 +1,6 @@
-const { series, src, dest, watch } = require("gulp"); //Базовые компоненты gulp
+const { series, parallel, src, dest, watch } = require("gulp"); //Базовые компоненты gulp
+
+const fs = require('fs')
 const del = require("del"); //Удаляет файлы
 
 const browserSync = require("browser-sync").create(); //Создает локальный сервер
@@ -12,101 +14,59 @@ const babelMinify = require("gulp-babel-minify"); //Сжимает js
 
 const obfuscate = require('gulp-javascript-obfuscator')
 
-const concat = require("gulp-concat"); //Склеивание 2 файлов
 const include = require("gulp-file-include"); //Включение одного файла в определенную часть другого
 
 const webp = require("gulp-webp"); //Конвертируем изображения в webp
 const imagemin = require("gulp-imagemin"); //Сжимаем картинки
+const { get } = require("browser-sync");
 
-const args = require("yargs").argv; //keyargs для вызовов в консоли
+//FTP деплой
+const gutil = require('gulp-util');
+const ftp = require('vinyl-ftp');
 
-let hard = Boolean(
-    args.hard
-);
-/*Получаем через консоль значение для выбора типа сборки true/false
-При дефолтном значении hard = false будет произведена soft(см. далее) сборка проекта в папку dist,
-При выставлении флага --hard переменная hard принимает значение true и производится hard(см. далее) сборка*/
 
-/*Перед началом работы вызвать npm i для установки всех зависимостей, а также npm i -g gulp для работы gulp`а*/
-
-/*soft сборка - сборка при которой происходит include для html, если таковые прописаны. 
-Sass компилируется. Сss переносится без изменений. JS переносится без изменений.
-Img растр конвертится в webp, сжимается и с изначальным файлом jpg и оптимизированным вектором переносится в папку.
-Все указанные выше файлы переносятся с заменой в папку dist. Папка components со всем содержимым переносится без изменений.
-
-hard сборка - выполняется, если hard принимает значение true. Html(см. soft). Sass проходит через autoprefixer и минифкацию, помимо компиляции.
-Сss минифицируется. Все js файлы проходят через babel(см. описание require('gulp-babel'), минифицируются и собираются в общий bundle.js).
-Img обрабатываются аналогично soft сборки. Папка components со всем содержимым переносится без изменений.
-Все указанные выше файлы переносятся с заменой в папку ProdBuild(создается при первом запуске gulp build --hard).
-
-В данной сборке доступно 2 таска - gulp dev и gulp build
-При вызове gulp dev производится soft сборка, а так же запуск browsersync и слежка за файлами
-При вызове gulp build производится soft сборка
-При вызове gulp build --hard производится hard сборка
-
-P.S Вы также можете отдельно вызывать gulp css/html/js/sass/clear/server/teleport*/
+// Логика путей в проекте
+class FolderSpace {
+    constructor(baseDir) {
+        this.main = baseDir
+        this.scss = baseDir + '/scss'
+        this.css = baseDir + '/css'
+        this.js = baseDir + '/js'
+        this.img = baseDir + '/img'
+        this.fonts = baseDir + '/fonts'
+        this.video = baseDir + '/video'
+    }
+}
 
 let path = {
-    //Путевая карта проекта
-    app: {
-        main: "./app",
-        get scss() {
-            return this.main + "/scss";
-        },
-        get js() {
-            return this.main + "/js";
-        },
-        get img() {
-            return this.main + "/img";
-        },
-        get fonts() {
-            return this.main + "/fonts";
-        },
-        get video() {
-            return this.main + "/video";
-        },
-    },
-    dist: {
-        main: "./dist",
-        get css() {
-            return this.main + "/css";
-        },
-        get js() {
-            return this.main + "/js";
-        },
-        get img() {
-            return this.main + "/img";
-        },
-        get fonts() {
-            return this.main + "/fonts";
-        },
-        get video() {
-            return this.main + "/video";
-        },
-    },
-    prod: {
-        main: "./prod",
-        get css() {
-            return this.main + "/css";
-        },
-        get js() {
-            return this.main + "/js";
-        },
-        get img() {
-            return this.main + "/img";
-        },
-        get fonts() {
-            return this.main + "/fonts";
-        },
-        get video() {
-            return this.main + "/video";
-        },
-    },
+    // Путевая карта проекта
+    app: new FolderSpace('./app'),
+    dist: new FolderSpace('./dist'),
+    prod: new FolderSpace('./prod'),
 };
 
+//Параметры сборки
+let options = {
+    //Режим компиляции
+    compile: 'dev',
+}
+
+// Задачи изменения параметров сборки
+function changeCompileStateToDev(done) {
+    options.compile = 'dev';
+    done()
+}
+
+function changeCompileStateToProd(done) {
+    options.compile = 'prod';
+    done()
+}
+
+//Общие функции
+
+// Задача отчистки предыдущих версий файлов
 function clear() {
-    //Отчистка всех предыдущих файлов
-    if (hard) {
+    if (options.compile === 'prod') {
         return (
             del(path.prod.js + "/*.js", { force: true }),
             del(path.prod.img + "/*", { force: true }),
@@ -115,20 +75,25 @@ function clear() {
             del(path.prod.fonts + "/*", { force: true }),
             del(path.prod.video + "/*", { force: true })
         );
+    } else if (options.compile === 'dev') {
+        return (
+            del(path.dist.js + "/*.js", { force: true }),
+            del(path.dist.img + "/*", { force: true }),
+            del(path.dist.css + "/*.css", { force: true }),
+            del(path.dist.main + "/*.html", { force: true }),
+            del(path.dist.fonts + "/*", { force: true }),
+            del(path.dist.video + "/*", { force: true })
+        );
+    } else {
+        throw new Error('Compile setting does not exists')
     }
-    return (
-        del(path.dist.js + "/*.js", { force: true }),
-        del(path.dist.img + "/*", { force: true }),
-        del(path.dist.css + "/*.css", { force: true }),
-        del(path.dist.main + "/*.html", { force: true }),
-        del(path.dist.fonts + "/*", { force: true }),
-        del(path.dist.video + "/*", { force: true })
-    );
 }
 
-let teleportList = [{ //список файлов которые нужно только перенести
+// Логика переноса файлов без изменений
+//Cписок файлов которые нужно только перенести
+let teleportList = [{
         inputDir: path.app.video, //откуда взять файл 
-        outputDir: path.dist.video, //куда выкинуть
+        outputDir: path.dist.video, //куда выкинуть dev
         prodDir: path.prod.video, //куда выкинуть prod
         get files() {
             return this.inputDir + '/*'
@@ -144,60 +109,66 @@ let teleportList = [{ //список файлов которые нужно то
     }
 ];
 
-async function teleport() {
-    //Перенос файлов без обработки
+//Перенос файлов без обработки
+function teleport(done) {
+    // Функция переноса конкретного вида файлов
+    function teleportItem(teleportingItem) {
+        if (options.compile === 'prod') {
+            return (src(teleportingItem.inputDir).pipe(dest(path.prod.main)), src(teleportingItem.files, {
+                allowEmpty: true,
+            }).pipe(dest(teleportingItem.prodDir)))
+        } else if (options.compile === 'dev') {
+            return (src(teleportingItem.inputDir).pipe(dest(path.dist.main)), src(teleportingItem.files, {
+                allowEmpty: true,
+            }).pipe(dest(teleportingItem.outputDir)))
+        } else {
+            throw new Error('Compile setting does not exists')
+        }
+    }
+
     for (let teleportingItem of teleportList) {
         teleportItem(teleportingItem)
     }
-}
 
-function teleportItem(teleportingItem) {
-    if (hard) {
-        return src(teleportingItem.inputDir).pipe(dest(path.prod.main)), src(teleportingItem.files).pipe(dest(teleportingItem.prodDir))
-    } else {
-        return src(teleportingItem.inputDir).pipe(dest(path.dist.main)), src(teleportingItem.files).pipe(dest(teleportingItem.outputDir))
-    }
-
+    done();
 }
 
 function htmlCompile() {
-    if (hard) {
+    if (options.compile === 'prod') {
         return src(path.app.main + "/*.html")
             .pipe(
-                include({
-                    context: {
-                        hard,
-                    },
-                })
+                include()
             )
             .pipe(dest(path.prod.main));
+    } else if (options.compile === 'dev') {
+        return src(path.app.main + "/*.html")
+            .pipe(
+                include()
+            )
+            .pipe(dest(path.dist.main));
+    } else {
+        throw new Error('Compile setting does not exists')
     }
-    return src(path.app.main + "/*.html")
-        .pipe(
-            include({
-                context: {
-                    hard,
-                },
-            })
-        )
-        .pipe(dest(path.dist.main));
 }
 
 function sassCompile() {
-    if (hard) {
+    if (options.compile === 'prod') {
         return src(path.app.scss + "/*.scss")
             .pipe(scss())
             .pipe(autoprefixer())
             .pipe(minifyCss())
             .pipe(dest(path.prod.css));
+    } else if (options.compile === 'dev') {
+        return src(path.app.scss + "/*.scss")
+            .pipe(scss())
+            .pipe(dest(path.dist.css));
+    } else {
+        throw new Error('Compile setting does not exists')
     }
-    return src(path.app.scss + "/*.scss")
-        .pipe(scss())
-        .pipe(dest(path.dist.css));
 }
 
 function jsCompile() {
-    if (hard) {
+    if (options.compile === 'prod') {
         return src(path.app.js + "/*.js")
             .pipe(
                 babel({
@@ -214,9 +185,12 @@ function jsCompile() {
             )
             .pipe(obfuscate())
             .pipe(dest(path.prod.js))
+    } else if (options.compile === 'dev') {
+        return src(path.app.js + "/*.js").pipe(dest(path.dist.js));
     }
-    return src(path.app.js + "/*.js").pipe(dest(path.dist.js));
 }
+
+// Обработка графики
 
 let imageOptimizeSettings = [
     //Настройки оптимизации графики
@@ -243,7 +217,7 @@ let imageList = [
 ];
 
 function imgCompile() {
-    if (hard) {
+    if (options.compile === 'prod') {
         return (
             src(imageList)
             .pipe(imagemin(imageOptimizeSettings))
@@ -253,17 +227,18 @@ function imgCompile() {
             .pipe(imagemin(imageOptimizeSettings))
             .pipe(dest(path.prod.img))
         );
+    } else if (options.compile === 'dev') {
+        return (
+            src(imageList)
+            .pipe(dest(path.dist.img)),
+            src(imageList.slice(0, 3))
+            .pipe(webp())
+            .pipe(dest(path.dist.img))
+        );
     }
-    return (
-        src(imageList)
-        .pipe(imagemin(imageOptimizeSettings))
-        .pipe(dest(path.dist.img)),
-        src(imageList.slice(0, 3))
-        .pipe(webp())
-        .pipe(imagemin(imageOptimizeSettings))
-        .pipe(dest(path.dist.img))
-    );
 }
+
+// Запуск Live Reload сервера
 
 function browserSyncStart() {
     browserSync.init({
@@ -273,7 +248,7 @@ function browserSyncStart() {
         },
     });
 
-    //Слежка за изменением файлов
+    //Слежка за изменением файлов и перезагрузка сервера
     watch(path.app.main + "/*.html", htmlCompile).on(
         "change",
         browserSync.reload
@@ -292,6 +267,31 @@ function browserSyncStart() {
     watch(path.app.video + "/*", compile)
 }
 
+function deploy() {
+    let rawdata = fs.readFileSync('ftp.json');
+    let ftpSettings = JSON.parse(rawdata);
+
+    let conn = ftp.create({
+        host: ftpSettings.adress,
+        user: ftpSettings.username,
+        password: ftpSettings.password,
+        parallel: 10,
+        log: gutil.log
+    });
+
+    let globs = [
+        'prod/**',
+    ];
+
+    // using base = '.' will transfer everything to /public_html correctly
+    // turn off buffering in gulp.src for best performance
+
+    return src(globs, { buffer: false })
+        .pipe(conn.dest('/www/test'));
+};
+
+// Обработка файлов при изменениях
+
 function watchChanges() {
     //Слежка за изменением файлов без перезагрузки сервера
     watch(path.app.main + "/*.html", htmlCompile)
@@ -303,23 +303,9 @@ function watchChanges() {
     watch(path.app.video + "/*", compile)
 }
 
-compile = series(
-    htmlCompile,
-    sassCompile,
+let compile = parallel(teleport, htmlCompile, sassCompile, jsCompile, imgCompile)
 
-    jsCompile,
-    imgCompile,
-    teleport
-);
-
-exports.clear = clear;
-exports.html = htmlCompile;
-
-exports.sass = sassCompile;
-exports.js = jsCompile;
-exports.watch = watchChanges
-exports.teleport = teleport;
-
-exports.serve = series(clear, compile, watchChanges);
-exports.dev = series(clear, compile, browserSyncStart);
-exports.build = series(clear, compile);
+exports.deploy = series(changeCompileStateToProd, clear, compile, deploy)
+exports.serve = series(changeCompileStateToDev, clear, compile, watchChanges);
+exports.dev = series(changeCompileStateToDev, clear, compile, browserSyncStart);
+exports.build = series(changeCompileStateToProd, clear, compile);

@@ -14,7 +14,7 @@ const babelMinify = require("gulp-babel-minify"); //Сжимает js
 
 const obfuscate = require('gulp-javascript-obfuscator')
 
-const include = require("gulp-file-include"); //Включение одного файла в определенную часть другого
+const include = require("gulp-include"); //Включение одного файла в определенную часть другого
 
 const webp = require("gulp-webp"); //Конвертируем изображения в webp
 const imagemin = require("gulp-imagemin"); //Сжимаем картинки
@@ -114,11 +114,15 @@ function teleport(done) {
     // Функция переноса конкретного вида файлов
     function teleportItem(teleportingItem) {
         if (options.compile === 'prod') {
-            return (src(teleportingItem.inputDir).pipe(dest(path.prod.main)), src(teleportingItem.files, {
+            return (src(teleportingItem.inputDir, {
+                allowEmpty: true,
+            }).pipe(dest(path.prod.main)), src(teleportingItem.files, {
                 allowEmpty: true,
             }).pipe(dest(teleportingItem.prodDir)))
         } else if (options.compile === 'dev') {
-            return (src(teleportingItem.inputDir).pipe(dest(path.dist.main)), src(teleportingItem.files, {
+            return (src(teleportingItem.inputDir, {
+                allowEmpty: true,
+            }).pipe(dest(path.dist.main)), src(teleportingItem.files, {
                 allowEmpty: true,
             }).pipe(dest(teleportingItem.outputDir)))
         } else {
@@ -137,13 +141,17 @@ function htmlCompile() {
     if (options.compile === 'prod') {
         return src(path.app.main + "/*.html")
             .pipe(
-                include()
+                include({
+                    hardFail: true,
+                })
             )
             .pipe(dest(path.prod.main));
     } else if (options.compile === 'dev') {
         return src(path.app.main + "/*.html")
             .pipe(
-                include()
+                include({
+                    hardFail: true,
+                })
             )
             .pipe(dest(path.dist.main));
     } else {
@@ -170,6 +178,12 @@ function sassCompile() {
 function jsCompile() {
     if (options.compile === 'prod') {
         return src(path.app.js + "/*.js")
+            .pipe(include({
+                hardFail: true,
+                includePaths: [
+                    __dirname + '/app'
+                ]
+            }))
             .pipe(
                 babel({
                     presets: ["@babel/env"],
@@ -186,7 +200,12 @@ function jsCompile() {
             .pipe(obfuscate())
             .pipe(dest(path.prod.js))
     } else if (options.compile === 'dev') {
-        return src(path.app.js + "/*.js").pipe(dest(path.dist.js));
+        return src(path.app.js + "/*.js").pipe(include({
+            hardFail: true,
+            includePaths: [
+                __dirname + '/app'
+            ]
+        })).pipe(dest(path.dist.js));
     }
 }
 
